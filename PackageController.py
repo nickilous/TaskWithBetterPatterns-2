@@ -19,7 +19,6 @@ class PackageController:
                 if location.street == row[Package.addressCol]:
                     package = Package(int(row[Package.idCol]), location, row[Package.DeadlineCol], row[Package.specialNotesCol], row[Package.mass])
                     self.packages.insert(package)
-        self.package_graph = Graph.create_from_nodes(self.packages.get_list())
     
     #gets package for a specific truck requirement
     def get_packages_for_specific_truck(self, truckId: int) -> List[Package]:
@@ -28,6 +27,20 @@ class PackageController:
             if package.truck == truckId:
                 truck_packages.append(package)
         return truck_packages
+    
+    def get_packages_with_truck(self):
+        truck_packages: List[Package] = []
+        for package in self.packages:
+            if package.truck is None:
+                truck_packages.append(package)
+        return truck_packages
+
+    def get_standard_packages(self):
+        packages: List[Package] = []
+        for package in self.packages:
+            if package.deliverWith is None and package.truck is None and package.delayedTill is None and package.deadline is None:
+                packages.append(package)
+        return packages
     
     #gets all the package with a deadline if deadline not specified
     #gets packages with specific deadline if deadline is specified

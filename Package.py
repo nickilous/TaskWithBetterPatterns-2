@@ -60,10 +60,13 @@ class Package(Identifiable):
             timeMinutes = int(re.findall('[0-9]+', timeparts[1])[0])
             
             self.deadline = datetime(self.now.year, self.now.month, self.now.day, timeHour, timeMinutes)
+    
     def on_truck(self):
         self.status = PackageStatus.ON_TRUCK
+    
     def delivered(self):
         self.status = PackageStatus.DELIVERED
+    
     def __repr__(self) -> str:
         string = "\n\tPackage Id: " + str(self.id)
         string += "\n\t\t Destination: " + str(self.destination)
