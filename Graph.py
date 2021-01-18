@@ -5,10 +5,14 @@ from typing import List
 class Graph:
   @classmethod
   def create_from_nodes(cls, nodes: List[Identifiable]):
-      return Graph(len(nodes), len(nodes), nodes)
-
+    return Graph(len(nodes), len(nodes), nodes)
+  
   @classmethod
-  def fromRaw(cls, nodes: List, weights: List) -> 'Graph':
+  def create_from_packages(cls, nodes: List[Identifiable]):
+    return Graph(len(nodes) + 1, len(nodes) + 1, nodes)
+  
+  @classmethod
+  def from_raw_data(cls, nodes: List, weights: List) -> 'Graph':
     graph = Graph.create_from_nodes(nodes)
     row = 0
     col = 0
@@ -62,7 +66,8 @@ class Graph:
   def connections_to(self, node: Identifiable):
     node = self.get_index_from_node(node)
     column = [row[node] for row in self.adj_mat]
-    return [(self.nodes[row_num], column[row_num]) for row_num in range(len(column)) if column[row_num] != 0]
+    return [self.nodes[row_num] for row_num in range(len(column)) if column[row_num] != 0]
+    #return [(self.nodes[row_num], column[row_num]) for row_num in range(len(column)) if column[row_num] != 0]
      
   
   def print_adj_mat(self):
@@ -91,6 +96,13 @@ class Graph:
   def has_conn(self, node1: Identifiable, node2: Identifiable):
     return self.can_traverse_dir(node1, node2) or self.can_traverse_dir(node2, node1)
   
+  def node_has_conn(self, node: Identifiable) -> bool:
+    has_conn = False
+    for node2 in range(len(self.nodes)):
+      if self.adj_mat[node.id][node2] != 0:
+        has_conn = True
+    return has_conn
+
   def add_node(self,node: Identifiable):
     self.nodes.append(node)
     node.index = len(self.nodes) - 1
@@ -106,7 +118,7 @@ class Graph:
   
   # Allows either node OR node indices to be passed into 
   def get_index_from_node(self, node: Identifiable):
-      if not isinstance(node, Identifiable) and not isinstance(node, int):
+      if not isinstance(node, (Identifiable, int)):
         raise ValueError("node must be an integer or Identifiable")
       if isinstance(node, int):
         return node

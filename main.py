@@ -1,3 +1,4 @@
+from Hub2 import Hub2
 from LocationController import LocationController
 from PackageController import PackageController
 from Graph import Graph
@@ -11,15 +12,18 @@ def main():
     location_controller = LocationController(csv_data.read_locations())
     package_controller = PackageController(csv_data.read_packages(), location_controller.locations)
 
-    city_map = Graph.fromRaw(location_controller.locations, csv_data.read_distances())
+    city_map = Graph.from_raw_data(location_controller.locations, csv_data.read_distances())
 
-    hub = Hub(package_controller, location_controller, city_map)
-
+    hub = Hub2(package_controller, location_controller, city_map)
+    hub.start_day()
+    print(hub.package_controller.packages)
+    print(hub.total_distance)
+    
     #print(hub.truck)
     #print(hub.route)
     #print(hub.route)
     #print(len(hub.route))
-    print(hub.load_truck())
+    #print(hub.load_truck())
     #print(hub.total_distance)
     
 

@@ -1,10 +1,9 @@
 from Package import Package, PackageStatus
-from os import close
-from Location import Location
 from datetime import datetime, timedelta
 from LocationController import LocationController
 from PackageController import PackageController
-import sys
+from ReturningThread import ReturningThread
+import queue
 
 from Graph import Graph
 from typing import List
@@ -13,7 +12,7 @@ from CSVReader import CSVReader
 
 
 class Hub():
-    def __init__(self, package_controller: PackageController, location_controller: LocationController, city_map: Graph, num_of_trucks: int = 3) -> None:
+    def __init__(self, package_controller: PackageController, location_controller: LocationController, city_map: Graph, num_of_trucks: int = 3, number_of_drivers: int = 2) -> None:
         super().__init__()
         self.hub_location = location_controller.locations[0]
         self.city_map = city_map
@@ -23,36 +22,73 @@ class Hub():
         
         self.startOfDay = datetime(now.year, now.month, now.day, 8)
         self.endOfDay = datetime(now.year, now.month, now.day, 17)
+    
 
         self.current_time = self.startOfDay
-        
+
         self.package_controller = package_controller
-        self.highest_priority_packages = package_controller.get_linked_packages_with_deadlines()
-        self.hight_priority_packages = package_controller.get_packages_with_deadline()
-        self.priority_packages = package_controller.get_linked_packages_without_deadlines()
-        self.packages_with_truck_specified = package_controller.get_packages_with_truck()
-        self.regular_packages = package_controller.get_standard_packages()
-        
+                
         self.num_of_trucks = num_of_trucks
+        self.num_of_drivers = number_of_drivers
+        
         self.trucks: List[Truck] = []
+        drivers = self.num_of_drivers
         for index in range(num_of_trucks):
-            #used positional agrumenst for better readability on the truck id argument
-            truck = Truck(id=index+1, city_map=self.city_map)
+            has_driver = False
+            #used positional agruments for better readability on the truck id argument
+            if drivers > 0:
+                has_driver = True
+                drivers -= 1
+            truck = Truck(id=index+1,hub=self.hub_location, has_driver=has_driver, city_map=self.city_map)
+            self.trucks.append(truck)
     
     def load_trucks(self):
-        for truck in self.trucks:
-            for package in self.highest_priority_packages:
-                if not truck.is_full() and package.truck != truck.id:
-                    self.highest_priority_packages.remove(package)
-                    self.load_truck(truck, package)
-
-
-    def load_truck(self, truck: Truck, package: Package, load) -> List:
-        truck.load_package(package)
-        self.package_controller.load_package_on_truck(package, self.current_time)
+        trucks = [truck for truck in self.trucks if truck.has_driver == True]
+        for truck in trucks:
+            while not truck.is_full() and self.package_controller.packages_left_to_load_on_truck():
+                truck = self.package_controller.load_packages_on_truck(truck, self.current_time)
+                self.current_time = self.current_time + timedelta(minutes=1)
+                print(self.current_time)
+            print(truck.packages)
+                
+    def load_truck(self, truck: Truck, package: Package) -> List:
+        truck.load_package(package, self.current_time)
+        self.package_controller.load_packages_on_truck(package, self.current_time)
     
-    def start_deliveries(self):
-        pass
+    def start_day(self):
+        deliver = self.package_controller.packages_left_to_deliver()
+        while deliver:
+            results = []
+            threads_list = []
+            self.load_trucks()
+            for truck in self.trucks:
+                if truck.has_driver:
+                    results.append(truck.deliver_packages(self.current_time))
+                    """ t = ReturningThread(target=truck.deliver_packages, args=(self.current_time,))
+                    t.start()
+                    threads_list.append(t) """
+
+            """ #Join all the threads
+            for t in threads_list:
+                result = t.join()
+                results.append(result) """
+            
+            
+            if len(results) > 0:
+                times = sorted(results, reverse=True)
+                self.current_time = self.current_time + times[0][0]
+                for result in results:
+                    self.total_distance += result[1]
+            else:
+                self.current_time = self.current_time + timedelta(minutes=1)
+            
+            for truck in self.trucks:
+                self.package_controller.deliver_package(truck)
+            
+            deliver = self.package_controller.packages_left_to_deliver()
+        print("----------------------------------------")
+        print(self.package_controller.packages)
+        print("Total Distance: " + str(self.total_distance))
             
     def _load_distances(self):
         csvData = CSVReader()
@@ -61,70 +97,9 @@ class Hub():
             distances.append(row)
         return distances
     
-
-    def _load_trucks(self):
-        trucks = []
-        for i in range(self.num_of_trucks):
-            truck = Truck(i + 1)
-            trucks.append(truck)
-           
-        
-        
-        # for truck in trucks:
-        #     for package in self.packages:
-        #         if not truck.is_full():
-        #             if package is not None:
-        #                 if package.deadline is not None and package.status is PackageStatus.AWAITING_DELIVERY:
-        #                     truck.load_package(package)
-        #                     package.on_truck()
-        #                 elif package.status is PackageStatus.AWAITING_DELIVERY:
-        #                     truck.load_package(package)
-        #                     package.on_truck()
-        
-        for truck in trucks:
-            for package in self.packages:
-                if not truck.is_full():
-                    if package is not None and package.status is PackageStatus.AWAITING_DELIVERY:
-                        if truck.id == package.truck:
-                            truck.load_package(package)
-                            if package.deliveredWith is not None:
-                                for id in package.deliveredWith:
-                                    truck.load_package(self.packages[id])
-                                    se
-                            continue
-                        if package.deadline is not None and package.delayedTill is None:
-                            truck.load_package(package)
-                            if package.deliveredWith is not None:
-                                for id in package.deliveredWith:
-                                    truck.load_package(self.packages[id])
-                            package.status = PackageStatus.ON_TRUCK
-                            continue
-                        if package.delayedTill is not None:
-                            truck.load_package(package)
-                            if package.deliveredWith is not None:
-                                for id in package.deliveredWith:
-                                    truck.load_package(self.packages[id])
-                            package.status = PackageStatus.ON_TRUCK
-
-        # for package in self.packages:
-        #     if package is not None:
-        #         for truck in trucks:
-        #             if not truck.is_full():
-        #                 if package.truck == truck.id:
-        #                     if truck.load_package(package):
-        #                         package.on_truck()
-        #                 if package.deadline is not None and package.status is PackageStatus.AWAITING_DELIVERY:
-        #                     if truck.load_package(package):
-        #                         package.on_truck()
-        #                     break
-        #                 if package.deadline is None and package.status is PackageStatus.AWAITING_DELIVERY:
-        #                     if truck.load_package(package):
-        #                         package.on_truck()
-        return trucks
-
 def main():
     hub = Hub()
-    #print(hub.packages)
+    hub.start_day()
     print(hub.trucks)
     #print(hub.graph)
 

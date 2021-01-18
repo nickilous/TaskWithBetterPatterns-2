@@ -6,6 +6,7 @@ from Identifiable import Identifiable
 from enum import Enum, auto
 
 class PackageStatus(Enum):
+    STAGED_AT_HUB = auto()
     AT_HUB = auto()
     ON_TRUCK = auto()
     DELIVERED = auto()
@@ -22,60 +23,94 @@ class Package(Identifiable):
         super().__init__(id)
         self.now = datetime.now()
         self.destination = location
+        
+        #package status
         self.status = PackageStatus.AT_HUB
-        self.timeOnTruck = timedelta
-        self.deliveryTime = timedelta
-        self.truck = None
-        self.delayedTill = None
-        self.deliveredWith = None
+        
+        #package data
+        self.time_at_hub = None
+        self.time_on_truck = None
+        self.deliver_time = None
+        self.package_destination_updated_at = None
+        self.delivered_with_truck = -1
+        
+        #truck constraints
+        self.required_truck = -1
+        
+        #bool values to search by
+        self.is_delayed_on_plane = False
+        self.has_other_packages = False
+        self.has_wrong_address = False
+        self.has_deadline = False
+
+        #time constraints
+        self.delayed_on_plane = None
+        self.deliver_with = []
+        self.will_be_address_updated_at = None
         self.deadline = None
         
+        #package update constraints
+        self.has_wrong_address = False
+
         delayedOnFlight = "Delayed on flight"
         requiredTruck = "Can only be on truck"
         mustBeDeliveredWith = "Must be delivered with"
+        wrongAddressDelivered = "Wrong address listed"
         eod= "EOD"
         
         if requiredTruck in specialNotes:
             for char in specialNotes.split():
                 if char.isdigit():
-                    self.truck = int(char)
+                    self.required_truck = int(char)
+        
         if delayedOnFlight in specialNotes:
             timepart = specialNotes[-7:]
             timeparts = timepart.split(":")
             timeHour = int(timeparts[0])
             timeMinutes = int(re.findall('[0-9]+', timeparts[1])[0])
             
-            self.delayedTill = datetime(self.now.year, self.now.month, self.now.day, timeHour, timeMinutes)
+            self.delayed_on_plane = datetime(self.now.year, self.now.month, self.now.day, timeHour, timeMinutes)
+            self.is_delayed_on_plane = True
 
         if mustBeDeliveredWith in specialNotes:
             intString = re.findall('[0-9]+', specialNotes)
-            self.deliveredWith: List[int] = []
+            self.must_be_delivered_wtih: List[int] = []
             for num in intString:
-                self.deliveredWith.append(int(num))
-            
+                self.deliver_with.append(int(num))
+            self.has_other_packages = True
 
+        if wrongAddressDelivered in specialNotes:
+            self.will_be_address_updated_at = datetime(self.now.year, self.now.month, self.now.day, 10, 20)
+            self.has_wrong_address = True
+            """410 S State St., Salt Lake City, UT 84111""" #corrected address
+        
         if eod not in deadline:
             timeparts = deadline.split(":")
             timeHour = int(timeparts[0])
             timeMinutes = int(re.findall('[0-9]+', timeparts[1])[0])
             
             self.deadline = datetime(self.now.year, self.now.month, self.now.day, timeHour, timeMinutes)
-    
+            self.has_deadline = True
+
     def on_truck(self):
         self.status = PackageStatus.ON_TRUCK
     
     def delivered(self):
         self.status = PackageStatus.DELIVERED
-    
+
+
     def __repr__(self) -> str:
         string = "\n\tPackage Id: " + str(self.id)
         string += "\n\t\t Destination: " + str(self.destination)
-        string += "\n\t\t Delivered: " + str(self.status)
-        string += "\n\t\t Truck: " + str(self.truck)
-        string += "\n\t\t Delayed Till: " + str(self.delayedTill)
+        string += "\n\t\t Status: " + str(self.status)
+        string += "\n\t\t Truck: " + str(self.required_truck)
+        string += "\n\t\t Time on truck: " + str(self.time_on_truck)
+        string += "\n\t\t Deliverd with truck: " + str(self.delivered_with_truck)
+        string += "\n\t\t Delayed Till: " + str(self.delayed_on_plane)
+        string += "\n\t\t Wrong Address update at: " + str(self.package_destination_updated_at)
         string += "\n\t\t Deadline: " + str(self.deadline)
-        string += "\n\t\t Deliver With: " + str(self.deliveredWith)
-        string += "\n\t\t Delivery Time: " + str(self.deliveryTime)
+        string += "\n\t\t Deliver With: " + str(self.deliver_with)
+        string += "\n\t\t Delivery Time: " + str(self.deliver_time)
         return string
     
     def __eq__(self, o) -> bool:

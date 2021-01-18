@@ -59,9 +59,10 @@ class HashTable():
         string = "Edges: "
 
         for index in range(len(self.table)):
-            string += "\n\nHash: " + str(index)
-            string += "\n----------------------"
-            string += "\nValue: " + str(self.table[index]) 
+            if self.table[index] is not None:
+                string += "\n\nHash: " + str(index)
+                string += "\n----------------------"
+                string += "\nValue: " + str(self.table[index]) 
         return string
     
     def __getitem__(self, key) -> Identifiable:
