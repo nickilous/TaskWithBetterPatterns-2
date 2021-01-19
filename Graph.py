@@ -1,6 +1,10 @@
 
 from Identifiable import Identifiable
-from typing import List
+from itertools import permutations
+from LocationController import LocationController
+from CSVReader import CSVReader
+import sys
+from typing import List, Tuple
 
 class Graph:
   @classmethod
@@ -34,6 +38,7 @@ class Graph:
     # set up an adjacency matrix
     self.adj_mat = [[0] * col for _ in range(row)]
     self.nodes = nodes
+    self.max_size = sys.maxsize
     # for i in range(len(self.nodes)):
     #     self.nodes[i].id = i
 
@@ -173,6 +178,40 @@ class Graph:
           dist[node.id][1].append(node)
     return dist
 
+# implementation of traveling Salesman Problem 
+  def travellingSalesmanProblem(self, node: Identifiable, destinations: List[Identifiable]): 
+    nodenum = self.get_index_from_node(node)
+    
+    # store all vertex apart from source vertex 
+    nodes = [] 
+    for destination in destinations: 
+        if destination.id != node.id: 
+            nodes.append(destination) 
+ 
+    # store minimum weight Hamiltonian Cycle 
+    min_path = self.max_size
+    next_permutation = permutations(nodes)
+    return_permutation = Tuple
+    for permutation in next_permutation:
+ 
+        # store current Path weight(cost) 
+        current_pathweight = 0
+ 
+        # compute current path weight 
+        k = nodenum 
+        for j in permutation:
+          j = self.get_index_from_node(j)
+          current_pathweight += self.adj_mat[k][j] 
+          k = j
+          print("start node {k}, end node {j}, permutation {permutation}".format(k=k, j=j, permutation=permutation))
+        current_pathweight += self.adj_mat[k][nodenum] 
+        # update minimum 
+        min_path = min(min_path, current_pathweight)
+        if min_path <= current_pathweight:
+          return_permutation = permutation
+         
+    return (min_path,return_permutation) 
+  
   def __str__(self) -> str:
     string = ""
     for index in range(len(self.nodes)):
@@ -184,3 +223,15 @@ class Graph:
   
   def __repr__(self) -> str:
       return self.__str__()
+
+def main():
+  csv_data = CSVReader()
+  location_controller = LocationController(csv_data.read_locations())
+  hub_location = location_controller.locations[0]
+
+  city_map = Graph.from_raw_data(location_controller.locations, csv_data.read_distances())
+
+  city_map.travellingSalesmanProblem(hub_location, location_controller.locations)
+  
+if __name__ == "__main__":
+    main()

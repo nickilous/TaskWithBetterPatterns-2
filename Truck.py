@@ -83,6 +83,28 @@ class Truck(Identifiable):
             self.deadline = package.deadline
     
     def __plan_route(self) -> List:
+        use_traveling_sales_man = True
+        
+        if use_traveling_sales_man:
+            self.__plan_route_traveling_sales_man()
+        else:
+            self.__plan_route_nearest_neighbor()
+    
+    def __get_destinations(self):
+        destinations = []
+        for package in self.packages:
+            destinations.append(package.destination)
+        return destinations
+    
+    def __plan_route_traveling_sales_man(self):
+        destinations = self.__get_destinations()
+        destinations = self.city_map.travellingSalesmanProblem(self.hub_location, destinations)[1]
+        for destination in destinations:
+            for package in self.packages:
+                if destination == package.destination:
+                    self.route.append(package)
+    
+    def __plan_route_nearest_neighbor(self):
         current_location = self.hub_location
         
         destinations = 0
@@ -104,7 +126,6 @@ class Truck(Identifiable):
             if closest_package not in self.route:
                 self.route.append(closest_package)
             destinations += 1
-
     def deliver_packages(self):
         self.departure_time = self.current_time
         self.delivery_time = self.current_time

@@ -25,6 +25,17 @@ class PackageController:
                     package = Package(int(row[Package.idCol]), location, row[Package.DeadlineCol], row[Package.specialNotesCol], row[Package.mass])
                     self.packages.insert(package)
         
+        self.duplicate_address_dict = {}
+        for package in self.packages:
+            if package is not None:
+                list_of_duplicate_street_packages = []
+                for second_package in self.packages:
+                    if second_package is not None:
+                        if package.destination == second_package.destination:
+                            list_of_duplicate_street_packages = [second_package.destination]
+                    self.duplicate_address_dict[package.destination] = list_of_duplicate_street_packages
+            
+
         self.linked_package_graph = Graph(len(self.packages) + 1, len(self.packages) + 1, self.packages)
         self.__link_packages()
         
