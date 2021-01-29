@@ -52,12 +52,6 @@ class Hub():
                 truck_has_deadline = truck.deadline in self.package_controller.deadlines
                 no_packages_left_to_load = self.package_controller.packages_left_to_load_on_truck()
                 truck_is_delayed = truck.delayed_till in self.package_controller.delay_times
-                
-                packages_left_to_deliver = [package for package in self.package_controller.packages\
-                    if package is not None\
-                    and  package.status == PackageStatus.AT_HUB]
-                
-                print(packages_left_to_deliver)
 
                 #Reason to stop trying to laod a truck
                 if truck_is_full:
@@ -66,60 +60,55 @@ class Hub():
                     break
                 if truck_is_delayed:
                     break
-                if no_packages_left_to_load:
+                if not no_packages_left_to_load:
                     break
 
     
     def start_day(self):
         packages_left_to_deliver = self.package_controller.packages_left_to_deliver()
         trucks_with_drivers = [truck for truck in self.trucks if truck.has_driver]
-        testing_one_truck_once = True
-        if testing_one_truck_once:
+        
+        while self.current_time < self.endOfDay or packages_left_to_deliver:
             self.load_trucks()
-            truck = self.trucks[0]
-            truck.deliver_packages()
-        else:
-        # while self.current_time < self.endOfDay or packages_left_to_deliver:
-        #     self.load_trucks()
             
-        #     delivery_results = []
+            delivery_results = []
             
-        #     trucks_with_drivers = [truck for truck in self.trucks if truck.has_driver == True]
-        #     trucks_with_packages = [truck for truck in trucks_with_drivers if len(truck.packages) > 0]
+            trucks_with_drivers = [truck for truck in self.trucks if truck.has_driver == True]
+            trucks_with_packages = [truck for truck in trucks_with_drivers if len(truck.packages) > 0]
             
-        #     for truck in trucks_with_packages:
-        #         for package in truck.packages:
-        #             if package.has_wrong_address:
-        #                 #19,Third District Juvenile Court,410 S State St
-        #                 location = Location(19, "Third District Juvenile Court", "410 S State St")
-        #                 self.package_controller.update_package_location(package, location, truck.current_time)
+            for truck in trucks_with_packages:
+                for package in truck.packages:
+                    if package.has_wrong_address:
+                        #19,Third District Juvenile Court,410 S State St
+                        location = Location(19, "Third District Juvenile Court", "410 S State St")
+                        self.package_controller.update_package_location(package, location, truck.current_time)
             
-        #     packages = [package for package in self.package_controller.packages if package is not None\
-        #         and package.status == PackageStatus.AT_HUB]
+            packages = [package for package in self.package_controller.packages if package is not None\
+                and package.status == PackageStatus.AT_HUB]
 
-        #     for truck in trucks_with_packages:
-        #         delivery_results.append(truck.deliver_packages())
-        #         self.package_controller.deliver_package(truck)
-        #         truck.reset()
+            for truck in trucks_with_packages:
+                delivery_results.append(truck.deliver_packages())
+                self.package_controller.deliver_package(truck)
+                truck.reset()
             
-        #     if len(delivery_results) == 0:
-        #         self.current_time = self.current_time + timedelta(minutes=1)
-        #         for truck in self.trucks:
-        #             truck.current_time = self.current_time
-        #     else:
-        #         truck_return_times = []
-        #         truck_total_milage = 0
-        #         for result in delivery_results:
-        #             truck_return_time = result[0]
-        #             truck_return_times.append(truck_return_time)
+            if len(delivery_results) == 0:
+                self.current_time = self.current_time + timedelta(minutes=1)
+                for truck in self.trucks:
+                    truck.current_time = self.current_time
+            else:
+                truck_return_times = []
+                truck_total_milage = 0
+                for result in delivery_results:
+                    truck_return_time = result[0]
+                    truck_return_times.append(truck_return_time)
                     
-        #             truck_total_milage += result[1]
-        #         self.total_distance += truck_total_milage
-        #         if len(truck_return_times) > 1:
-        #             truck_return_times = sorted(truck_return_times)
+                    truck_total_milage += result[1]
+                self.total_distance += truck_total_milage
+                if len(truck_return_times) > 1:
+                    truck_return_times = sorted(truck_return_times)
                 
-        #         time_between_trucks = truck_return_times[0] - self.current_time
-        #         self.current_time = self.current_time + time_between_trucks
+                time_between_trucks = truck_return_times[0] - self.current_time
+                self.current_time = self.current_time + time_between_trucks
             
             
             packages_left_to_deliver = self.package_controller.packages_left_to_deliver()

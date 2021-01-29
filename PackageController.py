@@ -3,7 +3,6 @@ from LocationController import LocationController
 from Graph import Graph
 from CSVReader import CSVReader
 from typing import List
-import threading
 from Location import Location
 from datetime import date, datetime, timedelta
 from Package import Package, PackageStatus
@@ -32,7 +31,7 @@ class PackageController:
                 for second_package in self.packages:
                     if second_package is not None:
                         if package.destination == second_package.destination:
-                            list_of_duplicate_street_packages = [second_package.destination]
+                            list_of_duplicate_street_packages.append(second_package.destination)
                     self.duplicate_address_dict[package.destination] = list_of_duplicate_street_packages
             
 
@@ -177,6 +176,19 @@ class PackageController:
                 and not package.has_wrong_address]
         # loads the previously grab packages
         self.load_truck_with_packages(truck, packages, truck.current_time)
+
+        # packages = [package for package in self.packages if package is not None\
+        #     and package.status == PackageStatus.AT_HUB\
+        #     and not package.has_deadline\
+        #     and not package.is_delayed_on_plane\
+        #     and not package.has_wrong_address\
+        #     and truck.id != package.required_truck]
+        # for truck_package in truck.packages:
+        #     for package in packages:
+        #         if truck_package.destination == package.destination:
+        #             self.load_truck_with_package(truck, package, truck.current_time)
+        # print()
+
         
         #----------------- Packages with deadlines and now delays and no wrong address or delay times ABOVE -----
         
@@ -189,14 +201,14 @@ class PackageController:
             and not truck.deadline < package.delayed_on_plane]
         self.load_truck_with_packages(truck, packages, truck.current_time)
         
-        package = [package for package in self.packages if package is not None\
+        packages = [package for package in self.packages if package is not None\
             and package.status == PackageStatus.AT_HUB\
             and package.has_deadline\
             and package.is_delayed_on_plane\
             and truck.current_time > package.delayed_on_plane]
         
         self.load_truck_with_packages(truck, packages, truck.current_time)
-        package = [package for package in self.packages if package is not None\
+        packages = [package for package in self.packages if package is not None\
             and package.status == PackageStatus.AT_HUB\
             and package.has_deadline\
             and package.is_delayed_on_plane
@@ -228,6 +240,18 @@ class PackageController:
                     and truck.deadline == self.end_of_day]
             self.load_truck_with_packages(truck, packages, truck.current_time)
         
+        packages = [package for package in self.packages if package is not None\
+            and package.status == PackageStatus.AT_HUB\
+            and not package.has_deadline\
+            and not package.is_delayed_on_plane\
+            and not package.has_wrong_address\
+            and truck.id != package.required_truck]
+        for truck_package in truck.packages:
+            for package in packages:
+                if truck_package.destination == package.destination:
+                    if package not in truck.packages:
+                        self.load_truck_with_package(truck, package, truck.current_time)
+        
         # gets all the packages that have no special requirements and are still at the hub
         if truck.deadline == self.end_of_day:
             packages = [package for package in self.packages\
@@ -256,30 +280,29 @@ class PackageController:
         return result
     
     def deliver_package(self, truck: Truck):
-        for package in truck.packages:
-            if package is not None:
-                self.update_package_status(package, PackageStatus.DELIVERED, package.deliveryTime)
+        for package in truck.route:
+            print("Delivering package: {package} \n\tfrom truck: {truck}".format(truck=truck.id, package=package))
+            self.update_package_status(package, PackageStatus.DELIVERED, package.delivery_time)
 
     def update_package_location(self, package: Package, destination: Location, time: datetime):
         package.destination = destination
         package.package_destination_updated_at = time
-        
-        with threading.Lock():
-            self.packages.update(package)
+        self.packages.update(package)
 
     def update_package_status(self, package: Package, status: PackageStatus, time: datetime) -> None:
         if status == PackageStatus.ON_TRUCK:
             package = self.packages.search(package)
             package.status = status
             package.time_on_truck = time
-            with threading.Lock():
-                self.packages.update(package)
+            self.packages.update(package)
         if status == PackageStatus.DELIVERED:
             package = self.packages.search(package)
             package.status = status
-            package.deliver_time = time
-            with threading.Lock():
-                self.packages.update(package)
+            package.delivery_time = time
+            self.packages.update(package)
+    
+    def get_package_from_id(self, id: int):
+        return self.packages.search(id)
 
 def main():
     csv_data = CSVReader()

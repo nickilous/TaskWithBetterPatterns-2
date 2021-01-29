@@ -30,9 +30,11 @@ class Package(Identifiable):
         #package data
         self.time_at_hub = None
         self.time_on_truck = None
-        self.deliver_time = None
+        self.delivery_time = None
         self.package_destination_updated_at = None
         self.delivered_with_truck = -1
+
+        self.time_at_hub = datetime(self.now.year, self.now.month, self.now.day, 8,0)
         
         #truck constraints
         self.required_truck = -1
@@ -70,6 +72,7 @@ class Package(Identifiable):
             timeMinutes = int(re.findall('[0-9]+', timeparts[1])[0])
             
             self.delayed_on_plane = datetime(self.now.year, self.now.month, self.now.day, timeHour, timeMinutes)
+            self.time_at_hub = self.delayed_on_plane
             self.is_delayed_on_plane = True
 
         if mustBeDeliveredWith in specialNotes:
@@ -110,7 +113,7 @@ class Package(Identifiable):
         string += "\n\t\t Wrong Address update at: " + str(self.package_destination_updated_at)
         string += "\n\t\t Deadline: " + str(self.deadline)
         string += "\n\t\t Deliver With: " + str(self.deliver_with)
-        string += "\n\t\t Delivery Time: " + str(self.deliver_time)
+        string += "\n\t\t Delivery Time: " + str(self.delivery_time)
         return string
     
     def __eq__(self, o) -> bool:

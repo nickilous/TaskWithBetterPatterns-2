@@ -63,9 +63,6 @@ class Truck(Identifiable):
         now = datetime.now()
         self.delayed_till = datetime(now.year, now.month, now.day, 8)
         self.deadline = datetime(now.year, now.month, now.day, 17)
-    
-    def set_departure_time(self, departure_time):
-        self.departure_time = departure_time
 
     def can_load(self, n: int) -> bool:
         return len(self.packages) + n <= self.capacity
@@ -83,7 +80,7 @@ class Truck(Identifiable):
             self.deadline = package.deadline
     
     def __plan_route(self) -> List:
-        use_traveling_sales_man = True
+        use_traveling_sales_man = False
         
         if use_traveling_sales_man:
             self.__plan_route_traveling_sales_man()
@@ -104,28 +101,27 @@ class Truck(Identifiable):
                 if destination == package.destination:
                     self.route.append(package)
     
-    def __plan_route_nearest_neighbor(self):
+    def __plan_route_nearest_neighbor(self): #O(n^5)
         current_location = self.hub_location
         
         destinations = 0
         closest_package = None
         packages = [package for package in self.packages if package is not None]
-        while destinations < len(packages):
+        while destinations < len(packages): #O(n)
             max_miles = sys.maxsize
-            for package in packages:
+            for package in packages: # O(n)
                 if package not in self.route:
-                    miles = self.city_map.dijkstra(current_location, package.destination)
+                    miles = self.city_map.dijkstra(current_location, package.destination) # O(n^3)
                     if miles < max_miles:
                         max_miles = miles
                         closest_package = package
-            if closest_package is None:
-                break
             
             current_location = closest_package.destination
             
-            if closest_package not in self.route:
-                self.route.append(closest_package)
+            self.route.append(closest_package)
+            
             destinations += 1
+    
     def deliver_packages(self):
         self.departure_time = self.current_time
         self.delivery_time = self.current_time
@@ -145,7 +141,7 @@ class Truck(Identifiable):
             self.delivery_time = self.current_time + timedelta(minutes=travel_minutes)
             
             
-            package.deliveryTime = self.delivery_time
+            package.delivery_time = self.delivery_time
             package.delivered_with_truck = self.id
             
             current_location = package.destination
